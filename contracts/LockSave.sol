@@ -60,11 +60,28 @@ contract LockSave {
     }
     modifier isWithDrawTime(uint timeStamp) {
         Saving memory saving = timeStampBySavings[timeStamp];
-        if(saving.owner == msg.sender && saving.withdrawTimestamp >= block.timestamp) {
+        if (
+            saving.owner == msg.sender &&
+            saving.withdrawTimestamp >= block.timestamp
+        ) {
             _;
+        } else {
+            revert UnauthorizedWithdrawTime(
+                saving.withdrawTimestamp,
+                msg.sender
+            );
         }
-        else {
-            revert UnauthorizedWithdrawTime(saving.withdrawTimestamp, msg.sender);
+    }
+
+    function getSavings() public view returns (Saving[] memory savings) {
+        Saving[] memory ownerSavings = new Saving[](
+            addressByTimestamp[msg.sender].length
+        );
+        for (uint i = 0; i < addressByTimestamp[msg.sender].length; i++) {
+            uint timeStamp = addressByTimestamp[msg.sender][i];
+            Saving memory saving = timeStampBySavings[timeStamp];
+            ownerSavings[i] = saving;
         }
+        return ownerSavings;
     }
 }
