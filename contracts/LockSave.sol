@@ -30,18 +30,41 @@ contract LockSave {
         _;
     }
 
-    function save(uint withdrawTimeStamp) public isValidSaving(withdrawTimeStamp) payable returns (uint value, uint timestamp, uint withdrawTimestamp) {
+    function save(uint withdrawTimeStamp)
+        public
+        payable
+        isValidSaving(withdrawTimeStamp)
+        returns (
+            uint value,
+            uint timestamp,
+            uint withdrawTimestamp
+        )
+    {
         uint timeStamp = block.timestamp;
         Saving memory saving = Saving({
-             owner:msg.sender,
-             value:msg.value,
-             timestamp: timeStamp,
-             withdrawTimestamp: withdrawTimeStamp
+            owner: msg.sender,
+            value: msg.value,
+            timestamp: timeStamp,
+            withdrawTimestamp: withdrawTimeStamp
         });
         addressByTimestamp[msg.sender].push(timestamp);
-        timeStampBySavings[timeStamp] =  saving;
+        timeStampBySavings[timeStamp] = saving;
         return (msg.value, timeStamp, withdrawTimeStamp);
     }
 
-    
+    modifier hasSavings() {
+        if (addressByTimestamp[msg.sender].length < 1) {
+            revert NoSavingsFound(msg.sender);
+        }
+        _;
+    }
+    modifier isWithDrawTime(uint timeStamp) {
+        Saving memory saving = timeStampBySavings[timeStamp];
+        if(saving.owner == msg.sender && saving.withdrawTimestamp >= block.timestamp) {
+            _;
+        }
+        else {
+            revert UnauthorizedWithdrawTime(saving.withdrawTimestamp, msg.sender);
+        }
+    }
 }
