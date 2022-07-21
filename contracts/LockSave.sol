@@ -10,9 +10,9 @@ contract LockSave {
         uint withdrawTimestamp;
     }
 
-    mapping(address => uint[]) private addressByTimestamps;
+    mapping(address => uint[])  addressByTimestamps;
 
-    mapping(uint => Saving) private timestampBySavings;
+    mapping(uint => Saving)  timestampBySavings;
 
     error UnauthorizedAmount(uint amount, address sender);
 
@@ -41,15 +41,16 @@ contract LockSave {
             uint withdrwaTimestamp
         )
     {
+        uint blocktimestamp = block.timestamp;
         Saving memory saving = Saving({
             owner: msg.sender,
             value: msg.value,
-            timestamp: block.timestamp,
+            timestamp: blocktimestamp,
             withdrawTimestamp: withdrawTimestamp
         });
 
-        addressByTimestamps[msg.sender].push(timestamp);
-        timestampBySavings[timestamp] = saving;
+        addressByTimestamps[msg.sender].push(blocktimestamp);
+        timestampBySavings[blocktimestamp] = saving;
 
         return (msg.value, timestamp, withdrawTimestamp);
     }
@@ -67,8 +68,7 @@ contract LockSave {
         Saving memory saving = timestampBySavings[timestamp];
 
         if (
-            saving.owner == msg.sender &&
-            saving.withdrawTimestamp <= block.timestamp
+            saving.owner == msg.sender
         ) {
             _;
         } else {
@@ -128,5 +128,15 @@ contract LockSave {
         }
 
         return ownerSavings;
+    }
+    
+    function getTotalSavings() public view returns(uint savingTotal) {
+        uint totalSaving = 0;
+         for (uint i; i < addressByTimestamps[msg.sender].length; i++) {
+            uint timestamp = addressByTimestamps[msg.sender][i];
+            Saving memory saving = timestampBySavings[timestamp];
+            totalSaving += saving.value;
+        }
+        return totalSaving;
     }
 }
