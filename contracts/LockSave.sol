@@ -84,4 +84,34 @@ contract LockSave {
         }
         return ownerSavings;
     }
+
+    function withDraw(uint savingTimeStamp)
+        public
+        hasSavings
+        isWithDrawTime(savingTimeStamp)
+        returns (
+            uint value,
+            uint savingsCount,
+            uint savingsTimestamps
+        )
+    {
+        Saving memory saving = timeStampBySavings[savingTimeStamp];
+        delete timeStampBySavings[savingTimeStamp];
+        for (uint i = 0; i < addressByTimestamp[msg.sender].length; i++) {
+            if (addressByTimestamp[msg.sender][i] == savingTimeStamp) {
+                delete addressByTimestamp[msg.sender][i];
+                break;
+            }
+        }
+        (bool sent, ) = payable(msg.sender).call{value: saving.value}("");
+        if (!sent) {
+            revert withdrawalFailed({sender: msg.sender});
+        }
+
+        return (
+            saving.value,
+            addressByTimestamp[msg.sender].length,
+            savingsTimestamps
+        );
+    }
 }
