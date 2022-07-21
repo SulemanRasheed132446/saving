@@ -4,7 +4,7 @@
   "description": "Hardhat basic saving project",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx hardhat compile && npx hardhat test"
   },
   "repository": {
     "type": "git",
@@ -19,5 +19,8 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^1.0.2",
     "hardhat": "^2.10.1"
+  },
+  "dependencies": {
+    "ethers": "^5.6.9"
   }
 }

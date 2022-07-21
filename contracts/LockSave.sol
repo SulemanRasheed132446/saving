@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
+
 pragma solidity ^0.8.0;
 
 contract LockSave {
@@ -9,109 +10,123 @@ contract LockSave {
         uint withdrawTimestamp;
     }
 
-    mapping(address => uint[]) private addressByTimestamp;
-    mapping(uint => Saving) private timeStampBySavings;
+    mapping(address => uint[]) private addressByTimestamps;
+
+    mapping(uint => Saving) private timestampBySavings;
 
     error UnauthorizedAmount(uint amount, address sender);
-    error UnauthorizedWithdrawTime(uint withdrawTimestamp, address sender);
-    error NoSavingsFound(address sender);
-    error withdrawalFailed(address sender);
 
-    modifier isValidSaving(uint withdrawTimeStamp) {
+    error UnauthorizedWithdrawTime(uint withdrawTimestamp, address sender);
+
+    modifier isValidSaving(uint withdrawTimestamp) {
         if (msg.value < 1) {
-            revert UnauthorizedAmount(msg.value, msg.sender);
+            revert UnauthorizedAmount({amount: msg.value, sender: msg.sender});
         }
-        if (withdrawTimeStamp < block.timestamp) {
+        if (withdrawTimestamp < block.timestamp) {
             revert UnauthorizedWithdrawTime({
-                withdrawTimestamp: withdrawTimeStamp,
+                withdrawTimestamp: withdrawTimestamp,
                 sender: msg.sender
             });
         }
         _;
     }
 
-    function save(uint withdrawTimeStamp)
+    function save(uint withdrawTimestamp)
         public
         payable
-        isValidSaving(withdrawTimeStamp)
+        isValidSaving(withdrawTimestamp)
         returns (
             uint value,
             uint timestamp,
-            uint withdrawTimestamp
+            uint withdrwaTimestamp
         )
     {
-        uint timeStamp = block.timestamp;
         Saving memory saving = Saving({
             owner: msg.sender,
             value: msg.value,
-            timestamp: timeStamp,
-            withdrawTimestamp: withdrawTimeStamp
+            timestamp: block.timestamp,
+            withdrawTimestamp: withdrawTimestamp
         });
-        addressByTimestamp[msg.sender].push(timestamp);
-        timeStampBySavings[timeStamp] = saving;
-        return (msg.value, timeStamp, withdrawTimeStamp);
+
+        addressByTimestamps[msg.sender].push(timestamp);
+        timestampBySavings[timestamp] = saving;
+
+        return (msg.value, timestamp, withdrawTimestamp);
     }
 
+    error NoSavingsFound(address sender);
+
     modifier hasSavings() {
-        if (addressByTimestamp[msg.sender].length < 1) {
+        if (addressByTimestamps[msg.sender].length < 1) {
             revert NoSavingsFound(msg.sender);
         }
         _;
     }
-    modifier isWithDrawTime(uint timeStamp) {
-        Saving memory saving = timeStampBySavings[timeStamp];
+
+    modifier isWithdrawTime(uint timestamp) {
+        Saving memory saving = timestampBySavings[timestamp];
+
         if (
             saving.owner == msg.sender &&
-            saving.withdrawTimestamp >= block.timestamp
+            saving.withdrawTimestamp <= block.timestamp
         ) {
             _;
         } else {
-            revert UnauthorizedWithdrawTime(
-                saving.withdrawTimestamp,
-                msg.sender
-            );
+            revert UnauthorizedWithdrawTime({
+                withdrawTimestamp: saving.withdrawTimestamp,
+                sender: msg.sender
+            });
         }
     }
 
-    function getSavings() public view returns (Saving[] memory savings) {
-        Saving[] memory ownerSavings = new Saving[](
-            addressByTimestamp[msg.sender].length
-        );
-        for (uint i = 0; i < addressByTimestamp[msg.sender].length; i++) {
-            uint timeStamp = addressByTimestamp[msg.sender][i];
-            Saving memory saving = timeStampBySavings[timeStamp];
-            ownerSavings[i] = saving;
-        }
-        return ownerSavings;
-    }
+    error withdrawalFailed(uint timestamp, uint withdrawTimestamp);
 
-    function withDraw(uint savingTimeStamp)
+    function withdraw(uint savingTimestamp)
         public
         hasSavings
-        isWithDrawTime(savingTimeStamp)
+        isWithdrawTime(savingTimestamp)
         returns (
             uint value,
             uint savingsCount,
             uint savingsTimestamps
         )
     {
-        Saving memory saving = timeStampBySavings[savingTimeStamp];
-        delete timeStampBySavings[savingTimeStamp];
-        for (uint i = 0; i < addressByTimestamp[msg.sender].length; i++) {
-            if (addressByTimestamp[msg.sender][i] == savingTimeStamp) {
-                delete addressByTimestamp[msg.sender][i];
+        Saving memory saving = timestampBySavings[savingTimestamp];
+        delete timestampBySavings[savingTimestamp];
+
+        for (uint i = 0; i < addressByTimestamps[msg.sender].length; i++) {
+            if (addressByTimestamps[msg.sender][i] == savingTimestamp) {
+                delete addressByTimestamps[msg.sender][i];
                 break;
             }
         }
+
         (bool sent, ) = payable(msg.sender).call{value: saving.value}("");
         if (!sent) {
-            revert withdrawalFailed({sender: msg.sender});
+            revert withdrawalFailed({
+                timestamp: block.timestamp,
+                withdrawTimestamp: saving.withdrawTimestamp
+            });
         }
 
         return (
             saving.value,
-            addressByTimestamp[msg.sender].length,
+            addressByTimestamps[msg.sender].length,
             savingsTimestamps
         );
+    }
+
+    function getSavings() public view returns (Saving[] memory savings) {
+        Saving[] memory ownerSavings = new Saving[](
+            addressByTimestamps[msg.sender].length
+        );
+
+        for (uint i; i < addressByTimestamps[msg.sender].length; i++) {
+            uint timestamp = addressByTimestamps[msg.sender][i];
+            Saving memory saving = timestampBySavings[timestamp];
+            ownerSavings[i] = (saving);
+        }
+
+        return ownerSavings;
     }
 }
