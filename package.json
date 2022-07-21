@@ -1,0 +1,23 @@
+{
+  "name": "saving",
+  "version": "1.0.0",
+  "description": "Hardhat basic saving project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SulemanRasheed132446/saving.git"
+  },
+  "author": "Goku72",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SulemanRasheed132446/saving/issues"
+  },
+  "homepage": "https://github.com/SulemanRasheed132446/saving#readme",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^1.0.2",
+    "hardhat": "^2.10.1"
+  }
+}
